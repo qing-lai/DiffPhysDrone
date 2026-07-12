@@ -95,8 +95,8 @@ std::vector<torch::Tensor> run_backward_cuda(
 //   return render_cuda(input, weights, bias, old_h, old_cell);
 // }
 
-PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("render", &render_cuda, "render (CUDA)");
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) { //TORCH_EXTENSION_NAME对应构建文件中quadsim_cuda，生成PyInit_quadsim_cuda
+  m.def("render", &render_cuda, "render (CUDA)"); //python函数名、C++函数地址、说明
   m.def("find_nearest_pt", &find_nearest_pt_cuda, "find_nearest_pt (CUDA)");
   m.def("update_state_vec", &update_state_vec_cuda, "update_state_vec (CUDA)");
   m.def("run_forward", &run_forward_cuda, "run_forward_cuda (CUDA)");

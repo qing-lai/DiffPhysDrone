@@ -5,17 +5,17 @@
 
 #include <vector>
 
-namespace {
+namespace { //匿名命名空间，内部函数仅限此文件使用
 
 template <typename scalar_t>
-__global__ void update_state_vec_cuda_kernel(
+__global__ void update_state_vec_cuda_kernel( //__global__表示是cuda kernel，很多线程并行跑同一份代码
     torch::PackedTensorAccessor<scalar_t,3,torch::RestrictPtrTraits,size_t> R_new,
     torch::PackedTensorAccessor<scalar_t,3,torch::RestrictPtrTraits,size_t> R,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> a_thr,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> v_pred,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> alpha,
     float yaw_inertia) {
-    const int b = blockIdx.x * blockDim.x + threadIdx.x;
+    const int b = blockIdx.x * blockDim.x + threadIdx.x; //当前线程负责的batch编号
     const int B = R.size(0);
     if (b >= B) return;
     // a_thr = a_thr - self.g_std;
@@ -62,8 +62,8 @@ template <typename scalar_t>
 __global__ void run_forward_cuda_kernel(
     torch::PackedTensorAccessor<scalar_t,3,torch::RestrictPtrTraits,size_t> R,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> dg,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> z_drag_coef,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> drag_2,
+    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> z_drag_coef, //z轴阻力系数
+    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> drag_2, //一次、二次阻力系数
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> pitch_ctl_delay,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> act_pred,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> act,
@@ -82,10 +82,11 @@ __global__ void run_forward_cuda_kernel(
     // alpha = torch.exp(-self.pitch_ctl_delay * ctl_dt)
     scalar_t alpha = exp(-pitch_ctl_delay[i][0] * ctl_dt);
     // self.act = act_pred * (1 - alpha) + self.act * alpha
-    for (int j=0; j<3; j++)
+    for (int j=0; j<3; j++) 
         act_next[i][j] = act_pred[i][j] * (1 - alpha) + act[i][j] * alpha;
     // self.dg = self.dg * math.sqrt(1 - ctl_dt) + torch.randn_like(self.dg) * 0.2 * math.sqrt(ctl_dt)
     // v_up = torch.sum(self.v * self.R[..., 2], -1, keepdim=True) * self.R[..., 2]
+    // 这里是计算相对空气的速度，投影到机体系z轴、x轴、y轴
     scalar_t v_rel_wind_x = v[i][0] - v_wind[i][0];
     scalar_t v_rel_wind_y = v[i][1] - v_wind[i][1];
     scalar_t v_rel_wind_z = v[i][2] - v_wind[i][2];
@@ -98,31 +99,31 @@ __global__ void run_forward_cuda_kernel(
     scalar_t v_left_s = v_rel_wind_x * R[i][0][1] + v_rel_wind_y * R[i][1][1] + v_rel_wind_z * R[i][2][1];
     scalar_t v_up_2 = v_up_s * abs(v_up_s);
     scalar_t v_fwd_2 = v_fwd_s * abs(v_fwd_s);
-    scalar_t v_left_2 = v_left_s * abs(v_left_s);
+    scalar_t v_left_2 = v_left_s * abs(v_left_s); //平方项
 
     scalar_t a_drag_2[3], a_drag_1[3];
     for (int j=0; j<3; j++){
         a_drag_2[j] = v_up_2 * R[i][j][2] * z_drag_coef[i][0] + v_left_2 * R[i][j][1] + v_fwd_2 * R[i][j][0];
         a_drag_1[j] = v_up_s * R[i][j][2] * z_drag_coef[i][0] + v_left_s * R[i][j][1] + v_fwd_s * R[i][j][0];
-    }
+    } //转到世界系
     // v_prep = self.v - v_up
     // scalar_t v_prep[3];
     // for (int j=0; j<3; j++)
     //     v_prep[j] = v[i][j] - v_up[j];
     // motor_velocity = (self.act - self.g_std).norm(2, -1, True).sqrt()
-    scalar_t dot = act[i][0] * act_next[i][0] + act[i][1] * act_next[i][1] + (act[i][2] + 9.80665) * (act_next[i][2] + 9.80665);
-    scalar_t n1 = act[i][0] * act[i][0] + act[i][1] * act[i][1] + (act[i][2] + 9.80665) * (act[i][2] + 9.80665);
-    scalar_t n2 = act_next[i][0] * act_next[i][0] + act_next[i][1] * act_next[i][1] + (act_next[i][2] + 9.80665) * (act_next[i][2] + 9.80665);
-    scalar_t av = acos(max(-1., min(1., dot / max(1e-8, sqrt(n1) * sqrt(n2))))) / ctl_dt;
+    scalar_t dot = act[i][0] * act_next[i][0] + act[i][1] * act_next[i][1] + (act[i][2] + 9.80665) * (act_next[i][2] + 9.80665); //实际推力加速度与期望推力加速度的点积
+    scalar_t n1 = act[i][0] * act[i][0] + act[i][1] * act[i][1] + (act[i][2] + 9.80665) * (act[i][2] + 9.80665); //实际推力加速度的模长平方
+    scalar_t n2 = act_next[i][0] * act_next[i][0] + act_next[i][1] * act_next[i][1] + (act_next[i][2] + 9.80665) * (act_next[i][2] + 9.80665); //期望推力加速度的模长平方
+    scalar_t av = acos(max(-1., min(1., dot / max(1e-8, sqrt(n1) * sqrt(n2))))) / ctl_dt; //二者夹角变化率
 
     scalar_t ax = act[i][0];
     scalar_t ay = act[i][1];
     scalar_t az = act[i][2] + 9.80665;
-    scalar_t thrust = sqrt(ax*ax+ay*ay+az*az);
+    scalar_t thrust = sqrt(ax*ax+ay*ay+az*az); //推力加速度模长
     scalar_t airmode_a[3] = {
         ax / thrust * av * airmode_av2a,
         ay / thrust * av * airmode_av2a,
-        az / thrust * av * airmode_av2a};
+        az / thrust * av * airmode_av2a}; //不知道为什么要有这个
     // scalar_t motor_velocity = sqrt(sqrt(act_x * act_x + act_y * act_y + act_z * act_z));
     // z_drag = self.z_drag_coef * v_prep * motor_velocity * 0.07
     // a_next = self.act + self.dg - z_drag
@@ -148,15 +149,15 @@ __global__ void run_backward_cuda_kernel(
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> v,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> v_wind,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> act_next,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_act_pred,
+    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_act_pred, //
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_act,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_p,
     torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_v,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_a,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> _d_act_next,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_p_next,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_v_next,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> _d_a_next,
+    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_a, //这五项是要传出
+    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> _d_act_next, //传入
+    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_p_next, //传入
+    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_v_next, //传入
+    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> _d_a_next, //传入
     float grad_decay,
     float ctl_dt) {
     const int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -180,7 +181,7 @@ __global__ void run_backward_cuda_kernel(
     // motor_velocity = (self.act - self.g_std).norm(2, -1, True).sqrt()
     scalar_t act_x = act_next[i][0];
     scalar_t act_y = act_next[i][1];
-    scalar_t act_z = act_next[i][2] + 9.80665;
+    scalar_t act_z = act_next[i][2] + 9.80665; //没用上
     // scalar_t motor_velocity = sqrt(sqrt(act_x * act_x + act_y * act_y + act_z * act_z));
     // // z_drag = self.z_drag_coef * v_prep * motor_velocity * 0.07
     // // a_next = self.act + self.dg - z_drag
@@ -203,7 +204,7 @@ __global__ void run_backward_cuda_kernel(
         d_v[i][j] = d_v_next[i][j] * pow(grad_decay, ctl_dt);
         d_a[i][j] = 0.5 * ctl_dt * d_v_next[i][j];
         d_a_next[j] += 0.5 * ctl_dt * d_v_next[i][j];
-    }
+    } //这里的d_a_next已经是其最后一项，不会再有可以叠加在其上的值，后面需要用到所以需要优先计算（一切在内部更新又用到内部后续更新的都需要优先计算）
     for (int j=0; j<3; j++){
         // p_next[i][j] = p[i][j] + v[i][j] * ctl_dt + 0.5 * a[i][j] * ctl_dt * ctl_dt;
         d_p[i][j] = d_p_next[i][j] * pow(grad_decay, ctl_dt);
@@ -216,7 +217,7 @@ __global__ void run_backward_cuda_kernel(
     // scalar_t d_v_scalar = 0;
     for (int j=0; j<3; j++){
         // a_next[i][j] = act_next[i][j] + dg[i][j] - z_drag_coef[i][0] * v_prep[j] * motor_velocity * 0.07 - a_drag_2 - a_drag_1;
-        d_act_next[j] += d_a_next[j];
+        d_act_next[j] += d_a_next[j]; //这里的d_a_next同理是其组成的最后一项
         // d_v_prep[j] -= z_drag_coef[i][0] * d_a_next[j] * motor_velocity * 0.07;
         // d_v_scalar -= d_a_next[j] * drag_2[i][0] * v[i][j];
         // d_v[i][j] -= d_a_next[j] * drag_2[i][0] * v_scalar;
@@ -290,11 +291,15 @@ std::vector<torch::Tensor> run_forward_cuda(
     torch::Tensor v_next = torch::empty_like(v);
     torch::Tensor a_next = torch::empty_like(a);
 
-    const int threads = R.size(0);
-    const dim3 blocks(1);
+    const int threads = R.size(0); //[B,3,3]返回0维，即batch_size  
+    const dim3 blocks(1); //cuda允许<<<gridDim, blockDim>>>传int或dim3，blocks.x=1,blocks.y=1,blocks.z=1，这里只是把第一项变为1
     AT_DISPATCH_FLOATING_TYPES(R.type(), "run_forward_cuda", ([&] {
+        //pytorch扩展宏，根据R.type()的类型，选择对应的scalar_t类型（宏内部约定），调用run_forward_cuda_kernel<scalar_t>函数
+        //字符串用于报错和调试
         run_forward_cuda_kernel<scalar_t><<<blocks, threads>>>(
+            //这里语法上，kernel<<<gridDim, blockDim>>>(...)，第一个参数代表一个grid多少个block，第二个参数代表一个block多少个thread
             R.packed_accessor<scalar_t,3,torch::RestrictPtrTraits,size_t>(),
+            //scalar_t是每个元素类型；把torch::Tensor转换为PackedTensorAccessor，方便在kernel中访问[][][]；3是维度；size_t是无符号整数类型，大小和平台有关，这里用来表示索引
             dg.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
             z_drag_coef.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
             drag_2.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
@@ -311,7 +316,7 @@ std::vector<torch::Tensor> run_forward_cuda(
             a_next.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
             ctl_dt, airmode_av2a);
     }));
-    return {act_next, p_next, v_next, a_next};
+    return {act_next, p_next, v_next, a_next}; //列表初始化
 }
 
 std::vector<torch::Tensor> run_backward_cuda(
@@ -368,7 +373,7 @@ torch::Tensor update_state_vec_cuda(
     torch::Tensor v_pred,
     torch::Tensor alpha,
     float yaw_inertia) {
-    const int threads = a_thr.size(0);
+    const int threads = a_thr.size(0); #batch_size
     const dim3 blocks(1);
     torch::Tensor R_new = torch::empty_like(R);
     AT_DISPATCH_FLOATING_TYPES(a_thr.type(), "update_state_vec", ([&] {
