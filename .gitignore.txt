@@ -1,0 +1,3 @@
+/__pycache__
+/runs
+/checkpoint0000.pth
