@@ -373,7 +373,7 @@ torch::Tensor update_state_vec_cuda(
     torch::Tensor v_pred,
     torch::Tensor alpha,
     float yaw_inertia) {
-    const int threads = a_thr.size(0); #batch_size
+    const int threads = a_thr.size(0); //batch_size
     const dim3 blocks(1);
     torch::Tensor R_new = torch::empty_like(R);
     AT_DISPATCH_FLOATING_TYPES(a_thr.type(), "update_state_vec", ([&] {

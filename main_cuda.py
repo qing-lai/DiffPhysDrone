@@ -26,7 +26,7 @@ parser.add_argument('--coef_obj_avoidance', type=float, default=1.5, help='quadr
 parser.add_argument('--coef_d_acc', type=float, default=0.01, help='control acceleration regularization')
 parser.add_argument('--coef_d_jerk', type=float, default=0.001, help='control jerk regularizatinon')
 parser.add_argument('--coef_d_snap', type=float, default=0.0, help='legacy')
-parser.add_argument('--coef_ground_affinity', type=float, default=0., help='legacy')
+parser.add_argument('--coef_ground_affinity', type=float, default=1., help='legacy')
 parser.add_argument('--coef_bias', type=float, default=0.0, help='legacy')
 parser.add_argument('--lr', type=float, default=1e-3)
 parser.add_argument('--grad_decay', type=float, default=0.4)

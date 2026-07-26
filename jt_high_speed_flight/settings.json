@@ -8,9 +8,9 @@
   "CameraDefaults": {
     "CaptureSettings": [
       {
-        "ImageType": 1,
-        "Width": 48,
-        "Height": 36,
+        "ImageType": 0,
+        "Width": 512,
+        "Height": 288,
         "FOV_Degrees": 79
       },
       {
@@ -25,41 +25,22 @@
     "drone_1": {
       "VehicleType": "SimpleFlight",
       "IsFpvVehicle": true,
-      "Cameras": {
-        "front_center_custom": {
-          "X": 0.25,
-          "Y": 0.0,
-          "Z": -0.1,
-          "Pitch": 20,
-          "Roll": 0,
-          "Yaw": 0
-        }
-      },
       "X": 0,
       "Y": 0,
       "Z": 0,
       "Pitch": 0,
       "Roll": 0,
-      "Yaw": 0
-    }
-  },
-  "ExternalCameras": {
-    "BEV": {
-      "CaptureSettings": [
-        {
-          "ImageType": 0,
-          "Width": 512,
-          "Height": 288,
-          "OrthoWidth": 8,
-          "ProjectionMode": "orthographic"
+      "Yaw": 0,
+      "Cameras": {
+        "front_center_custom": {
+          "X": 0.25,
+          "Y": 0.0,
+          "Z": -0.1,
+          "Pitch": 10,
+          "Roll": 0,
+          "Yaw": 0
         }
-      ],
-      "X": 3.0,
-      "Y": 0.0,
-      "Z": -6.0,
-      "Pitch": -90,
-      "Roll": 0,
-      "Yaw": -90
+      }
     }
   },
   "SubWindows": [
@@ -73,11 +54,11 @@
     },
     {
       "WindowID": 1,
-      "CameraName": "BEV",
+      "CameraName": "front_center_custom",
       "ImageType": 0,
-      "VehicleName": "",
+      "VehicleName": "drone_1",
       "Visible": true,
-      "External": true
+      "External": false
     }
   ]
 }
