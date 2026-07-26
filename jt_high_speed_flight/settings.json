@@ -18,6 +18,12 @@
         "Width": 48,
         "Height": 36,
         "FOV_Degrees": 79
+      },
+      {
+        "ImageType": 1,
+        "Width": 48,
+        "Height": 36,
+        "FOV_Degrees": 79
       }
     ]
   },
@@ -36,7 +42,7 @@
           "X": 0.25,
           "Y": 0.0,
           "Z": -0.1,
-          "Pitch": 10,
+          "Pitch": 20,
           "Roll": 0,
           "Yaw": 0
         }
@@ -56,6 +62,14 @@
       "WindowID": 1,
       "CameraName": "front_center_custom",
       "ImageType": 0,
+      "VehicleName": "drone_1",
+      "Visible": true,
+      "External": false
+    },
+    {
+      "WindowID": 2,
+      "CameraName": "front_center_custom",
+      "ImageType": 1,
       "VehicleName": "drone_1",
       "Visible": true,
       "External": false
