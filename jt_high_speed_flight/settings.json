@@ -7,6 +7,7 @@
   "ClockSpeed": 0.25,
   "CameraDefaults": {
     "CaptureSettings": [
+      
       {
         "ImageType": 0,
         "Width": 512,
@@ -14,13 +15,13 @@
         "FOV_Degrees": 79
       },
       {
-        "ImageType": 3,
+        "ImageType": 1,
         "Width": 48,
         "Height": 36,
         "FOV_Degrees": 79
       },
       {
-        "ImageType": 1,
+        "ImageType": 3,
         "Width": 48,
         "Height": 36,
         "FOV_Degrees": 79
@@ -42,7 +43,7 @@
           "X": 0.25,
           "Y": 0.0,
           "Z": -0.1,
-          "Pitch": 20,
+          "Pitch": 15,
           "Roll": 0,
           "Yaw": 0
         }
@@ -53,7 +54,7 @@
     {
       "WindowID": 0,
       "CameraName": "front_center_custom",
-      "ImageType": 3,
+      "ImageType": 0,
       "VehicleName": "drone_1",
       "Visible": true,
       "External": false
@@ -61,15 +62,7 @@
     {
       "WindowID": 1,
       "CameraName": "front_center_custom",
-      "ImageType": 0,
-      "VehicleName": "drone_1",
-      "Visible": true,
-      "External": false
-    },
-    {
-      "WindowID": 2,
-      "CameraName": "front_center_custom",
-      "ImageType": 1,
+      "ImageType": 3,
       "VehicleName": "drone_1",
       "Visible": true,
       "External": false

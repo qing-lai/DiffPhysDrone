@@ -109,8 +109,8 @@ args = parser.parse_args()
 print(args)
 
 
-hover_thr = 0.297 #airsim中油门线性，这里可能有改过无人机模型
-# hover_thr = 0.593
+# hover_thr = 0.297 #airsim中油门线性，这里改过无人机模型
+hover_thr = 0.8
 datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S") #年月日_时分秒
 log_dir = f'exps_{args.target_speed}/{datetime_str}/'
 os.makedirs(log_dir)
@@ -125,7 +125,7 @@ agents = {
         ("drone_6", [[ 6,  1.2, 0], [ 0, -1.2, 0]]),
     ],
     "single": [
-        ("drone_1", [[0, 1.2, -1], [6, 1.2, -1]]),
+        ("drone_1", [[0, 0, -4], [120, 20, -4]]),
     ]
 }[args.env]
 
@@ -221,7 +221,7 @@ def main():
     rate = Rate(15 * args.clockspeed)
     t_begin_real = time()
     t_now = t_begin = state.timestamp / 1e9 #仿真秒
-    t_end = t_begin + 30
+    t_end = t_begin + 300
     # wind = [0, 0, 0]
     # a_set = [0, 0, 0]
     ctl_error = 0
