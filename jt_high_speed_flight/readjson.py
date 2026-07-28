@@ -4,7 +4,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
 # 读取JSON文件（假设文件名为 traj_history.json）
-with open('/home/liujiantao/DiffPhysDrone_JT/DiffPhysDrone/jt_high_speed_flight/exps_6.0/20260727_171821/traj_history.json', 'r') as f:
+with open('/home/liujiantao/DiffPhysDrone_JT/DiffPhysDrone/jt_high_speed_flight/exps_6.0/20260728_1721/traj_history.json', 'r') as f:
     data = json.load(f)
 
 # 提取无人机数据

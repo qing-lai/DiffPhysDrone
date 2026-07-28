@@ -110,7 +110,7 @@ print(args)
 
 
 # hover_thr = 0.297 #airsim中油门线性，这里改过无人机模型
-hover_thr = 0.8
+hover_thr = 0.6
 datetime_str = datetime.now().strftime("%Y%m%d_%H%M%S") #年月日_时分秒
 log_dir = f'exps_{args.target_speed}/{datetime_str}/'
 os.makedirs(log_dir)
@@ -125,7 +125,7 @@ agents = {
         ("drone_6", [[ 6,  1.2, 0], [ 0, -1.2, 0]]),
     ],
     "single": [
-        ("drone_1", [[0, 0, -4], [120, 20, -4]]),
+        ("drone_1", [[10, 10, -4], [346, -60, -4]]),
     ]
 }[args.env]
 
@@ -265,7 +265,7 @@ def main():
             R[i] = quaternion_to_matrix(q)
 
             # step to the next checkpoint if distance < 1
-            if not done_flag[i] and torch.norm(p_target[i] - p) < 1.5:
+            if not done_flag[i] and torch.norm(p_target[i][0:2] - p[0:2]) < 1.5 and torch.norm(p_target[i][2] - p[2]) < 1.5:
                 if waypoints: #如果还有点就继续取下一个航点
                     x, y, z = waypoints.pop(0)
                     p_target[i] = torch.as_tensor([x, -y, -z])
@@ -278,8 +278,34 @@ def main():
 
         # target velocity points to the target (with norm bounded by target_speed)
         target_v = p_target - last_p
+        v_z_max = args.target_speed
+        v_xy = target_v[:, :2]
+        v_z = target_v[:, 2:3] + 0.3*state.kinematics_estimated.linear_velocity.z_val
+        v_z = torch.clamp(v_z, -v_z_max, v_z_max)
+        v_z_abs = torch.abs(v_z)
+        max_horizontal = torch.sqrt(args.target_speed**2 - v_z_abs**2 + 1e-8)
+        v_xy_norm = torch.norm(v_xy, dim=-1, keepdim=True)
+        v_xy_norm_new = torch.clamp(v_xy_norm, max=max_horizontal)
+        v_xy = v_xy / (v_xy_norm + 1e-8) * v_xy_norm_new
+        target_v = torch.cat([v_xy, v_z], -1)
         target_v_norm = torch.norm(target_v, 2, -1, keepdim=True)
         target_v = target_v / target_v_norm * target_v_norm.clamp_max(args.target_speed)
+
+        # # target velocity points to the target (with norm bounded by target_speed)
+        # target_v = p_target - last_p
+        # v_z_max = 0.9 * args.target_speed
+        # v_xy = target_v[:, :2]
+        # v_z = target_v[:, 2:3]
+        # v_z = torch.clamp(v_z, -v_z_max, v_z_max)
+        # v_z_abs = torch.abs(v_z)
+        # effective_target_speed = torch.sqrt(args.target_speed**2 + v_z_abs**2 + 1e-8)  # (B, 1)
+        # max_horizontal = torch.sqrt(effective_target_speed**2 - v_z_abs**2 + 1e-8)
+        # v_xy_norm = torch.norm(v_xy, dim=-1, keepdim=True)
+        # v_xy_norm_new = torch.clamp(v_xy_norm, max=max_horizontal)
+        # v_xy = v_xy / (v_xy_norm + 1e-8) * v_xy_norm_new
+        # target_v = torch.cat([v_xy, v_z], -1)
+        # target_v_norm = torch.norm(target_v, 2, -1, keepdim=True)
+        # target_v = target_v / (target_v_norm + 1e-8) * target_v_norm.clamp_max(effective_target_speed)
 
         env_R = R.clone()
         fwd = R[:, :, 0].clone()
@@ -313,12 +339,12 @@ def main():
         # obtain acceleration setpoint
         a_setpoint = v_setpoint - v_est + ctl_error
         a_setpoint[:, 2] += 9.80665
-
         #构造期望姿态
         # convert acceleration setpoint to rpy throttle
         throttle = torch.norm(a_setpoint, 2, -1)
         up_vec = a_setpoint / throttle[..., None]
         throttle = throttle + local_v[:, 2] * local_v[:, 2].abs() * 0.01 #二次阻力补偿
+        throttle = throttle / env_R[:, 2, 2]
 
         # forward vector is the normalized moving average of target vector
         forward_vec = env_R[..., 0] * 5 + p_target - last_p
